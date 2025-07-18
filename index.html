@@ -102,8 +102,7 @@
                     .then(() => DWTObject.ConvertToBlob([DWTObject.HowManyImagesInBuffer - 1], Dynamsoft.DWT.EnumDWT_ImageType.IT_PDF))
                     .then((result) => {
                         scannedBlob = result;
-                        alert("Scan successful. Ready to upload.");
-                        showDialog();
+                        showDialog(); // removed alert here
                     })
                     .catch(exp => console.error(exp.message));
             }
@@ -141,7 +140,7 @@
                 return;
             }
 
-            const uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/KP Docs/${fileName}:/content`;
+            const uploadUrl = fileName; // full URL passed as file_name
 
             try {
                 const response = await fetch(uploadUrl, {
