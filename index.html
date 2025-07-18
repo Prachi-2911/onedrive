@@ -117,7 +117,8 @@
 
         if (response.ok) {
             const json = await response.json();
-            alert("Upload successful!\nFile URL: " + json.webUrl);
+            // alert("Upload successful!\nFile URL: " + json.webUrl); // ✅ Commented as requested
+            console.log("Upload successful. File URL:", json.webUrl);
         } else {
             const errorText = await response.text();
             alert("Upload failed:\n" + errorText);
@@ -128,6 +129,7 @@
         console.error("Upload error:", err);
     }
 }
+
 
 
         function ResetContainer() {
