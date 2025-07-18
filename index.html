@@ -103,7 +103,7 @@
                 return;
             }
 
-            const uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/${fileName}:/content`;
+            const uploadUrl = `https://graph.microsoft.com/${fileName}:/content`;
 
             try {
                 const response = await fetch(uploadUrl, {
