@@ -1,64 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>KP Document Uploader</title>
-<style>
+    <title>KP Scan & Upload Document</title>
+    <script type="text/javascript" src="Resources/dynamsoft.webtwain.initiate.js"></script>
+    <script type="text/javascript" src="Resources/dynamsoft.webtwain.config.js"></script>
+    <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
             text-align: center;
-            padding: 50px;
-        }
-        h2 {
-            color: #333;
-        }
-        input[type="file"] {
-            padding: 10px;
-            margin: 20px;
+            padding: 30px;
+            background-color: #f4f4f4;
         }
         button {
+            padding: 12px 20px;
             background-color: #0078D4;
             color: white;
-            padding: 10px 20px;
             border: none;
-            cursor: pointer;
+            border-radius: 5px;
+            margin: 10px;
             font-size: 16px;
-            border-radius: 4px;
+            cursor: pointer;
         }
         button:hover {
-            background-color: #005a9e;
+            background-color: #005A9E;
         }
-</style>
+    </style>
 </head>
 <body>
  
-    <h2>Upload Scanned Document to OneDrive</h2>
-<input type="file" id="fileInput" />
-<br />
-<button onclick="uploadFile()">Upload to OneDrive</button>
+    <h2>KP Scan and Upload Document</h2>
+    <button onclick="acquireImage()">Scan Document</button>
+    <button onclick="uploadToOneDrive()">Upload to OneDrive</button>
  
     <script>
-        async function uploadFile() {
-            const fileInput = document.getElementById("fileInput");
-            if (!fileInput.files.length) {
-                alert("Please select a file first.");
+        let DWObject = null;
+        let scannedBlob = null;
+ 
+        Dynamsoft.DWT.RegisterEvent('OnWebTwainReady', function () {
+            DWObject = Dynamsoft.DWT.GetWebTwain('dwtcontrolContainer');
+        });
+ 
+        function acquireImage() {
+            if (!DWObject) {
+                alert("Scanner not ready yet.");
                 return;
             }
  
-            const file = fileInput.files[0];
+            DWObject.SelectSourceAsync().then(() => {
+                return DWObject.AcquireImageAsync({});
+            }).then(() => {
+                return DWObject.ConvertToBlob([0], Dynamsoft.DWT.EnumDWT_ImageType.IT_PDF);
+            }).then((result) => {
+                scannedBlob = result;
+                alert("Scan successful. Ready to upload.");
+                console.log("Scanned Blob:", scannedBlob);
+            }).catch((err) => {
+                alert("Scan failed: " + err.message);
+                console.error(err);
+            });
+        }
  
-            // Extract parameters from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const accessToken = urlParams.get("access_token");
-            const orderNo = urlParams.get("order_no");
-            const applicationType = urlParams.get("application_type") || file.type || "application/octet-stream";
+        async function uploadToOneDrive() {
+            if (!scannedBlob) {
+                alert("Please scan a document first.");
+                return;
+            }
+ 
+            // Read URL parameters
+            const params = new URLSearchParams(window.location.search);
+            const accessToken = params.get("access_token");
+            const orderNo = params.get("order_no");
+            const applicationType = params.get("application_type") || "application/pdf";
  
             if (!accessToken || !orderNo) {
-                alert("Missing access_token or order_no in the URL.");
+                alert("Missing access_token or order_no in URL.");
                 return;
             }
  
-            const fileName = `${orderNo}_${file.name}`;
+            const fileName = `${orderNo}_Scanned.pdf`;
             const uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/KP Docs/${fileName}:/content`;
  
             try {
@@ -68,7 +87,7 @@
                         "Authorization": `Bearer ${accessToken}`,
                         "Content-Type": applicationType
                     },
-                    body: file
+                    body: scannedBlob
                 });
  
                 if (response.ok) {
@@ -76,16 +95,19 @@
                     alert("Upload successful!\nFile URL: " + json.webUrl);
                     console.log("Upload success:", json);
                 } else {
-                    const error = await response.text();
-                    alert("Upload failed:\n" + error);
-                    console.error("Upload failed:", error);
+                    const errorText = await response.text();
+                    alert("Upload failed:\n" + errorText);
+                    console.error("Upload failed:", errorText);
                 }
             } catch (err) {
                 alert("An unexpected error occurred.");
                 console.error("Upload error:", err);
             }
         }
-</script>
+    </script>
+ 
+    <!-- Dynamsoft container (required) -->
+    <div id="dwtcontrolContainer" style="width:0;height:0;"></div>
  
 </body>
 </html>
