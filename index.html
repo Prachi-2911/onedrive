@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>KP Scan & Auto Upload Document</title>
+    <title>KP Scan & Upload Document</title>
     <script type="text/javascript" src="Resources/dynamsoft.webtwain.initiate.js"></script>
     <script type="text/javascript" src="Resources/dynamsoft.webtwain.config.js"></script>
     <style>
@@ -13,6 +13,7 @@
             background-color: #f4f4f4;
             height: 100vh;
         }
+
         #input-container {
             display: flex;
             gap: 10px;
@@ -22,6 +23,7 @@
             padding: 10px;
             z-index: 1000;
         }
+
         #scan-button, #cancel-button {
             width: 200px;
             height: 35px;
@@ -31,10 +33,13 @@
             border-radius: 5px;
             cursor: pointer;
         }
+
         #scan-button { background-color: #28a745; }
         #scan-button:hover { background-color: #218838; }
+
         #cancel-button { background-color: #dc3545; }
         #cancel-button:hover { background-color: #c82333; }
+
         #dwtcontrolContainer {
             width: 400px;
             height: 500px;
@@ -54,6 +59,7 @@
 
     <script type="text/javascript">
         let DWTObject = null;
+        let scannedBlob = null;
 
         Dynamsoft.DWT.RegisterEvent("OnWebTwainReady", function () {
             DWTObject = Dynamsoft.DWT.GetWebTwain('dwtcontrolContainer');
@@ -79,20 +85,25 @@
                         [DWTObject.HowManyImagesInBuffer - 1],
                         Dynamsoft.DWT.EnumDWT_ImageType.IT_PDF
                     ))
-                    .then(blob => UploadToOneDrive(blob))
+                    .then((result) => {
+                        scannedBlob = result;
+                        uploadToOneDrive(); // Automatically upload after scan
+                    })
                     .catch(exp => console.error(exp.message));
             }
         }
 
-        async function UploadToOneDrive(scannedBlob) {
+        async function uploadToOneDrive() {
             const accessToken = getQueryParameter("access_token");
-            const uploadUrl = getQueryParameter("file_name"); // Full Graph URL
+            const fileName = getQueryParameter("file_name");
             const applicationType = getQueryParameter("application_type") || "application/pdf";
 
-            if (!accessToken || !uploadUrl) {
-                alert("Missing access_token or file_name (uploadUrl) in URL.");
+            if (!accessToken || !fileName) {
+                alert("Missing access_token or file_name in URL.");
                 return;
             }
+
+            const uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/${fileName}:/content`;
 
             try {
                 const response = await fetch(uploadUrl, {
@@ -106,12 +117,14 @@
 
                 if (response.ok) {
                     const json = await response.json();
-                    alert("✅ Upload successful!\nFile URL: " + json.webUrl);
+                    alert("Upload successful!\nFile URL: " + json.webUrl);
                 } else {
                     const errorText = await response.text();
+                    alert("Upload failed:\n" + errorText);
                     console.error("Upload failed:", errorText);
                 }
             } catch (err) {
+                alert("An unexpected error occurred.");
                 console.error("Upload error:", err);
             }
         }
