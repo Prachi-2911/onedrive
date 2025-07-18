@@ -66,6 +66,7 @@
                 return;
             }
 
+            // Read URL parameters
             const params = new URLSearchParams(window.location.search);
             const accessToken = params.get("access_token");
             const fileName = params.get("file_name");
@@ -85,3 +86,26 @@
                         "Authorization": `Bearer ${accessToken}`,
                         "Content-Type": applicationType
                     },
+                    body: scannedBlob
+                });
+
+                if (response.ok) {
+                    const json = await response.json();
+                    alert("Upload successful!\nFile URL: " + json.webUrl);
+                    console.log("Upload success:", json);
+                } else {
+                    const errorText = await response.text();
+                    alert("Upload failed:\n" + errorText);
+                    console.error("Upload failed:", errorText);
+                }
+            } catch (err) {
+                alert("An unexpected error occurred.");
+                console.error("Upload error:", err);
+            }
+        }
+    </script>
+
+    <!-- Dynamsoft container (required) -->
+    <div id="dwtcontrolContainer" style="width:0;height:0;"></div>
+</body>
+</html>
