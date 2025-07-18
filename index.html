@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>KP Scan & Upload Document</title>
+    <title>KP Scan & Auto Upload Document</title>
     <script type="text/javascript" src="Resources/dynamsoft.webtwain.initiate.js"></script>
     <script type="text/javascript" src="Resources/dynamsoft.webtwain.config.js"></script>
     <style>
@@ -22,7 +22,7 @@
             padding: 10px;
             z-index: 1000;
         }
-        #scan-button, #cancel-button, #upload-button {
+        #scan-button, #cancel-button {
             width: 200px;
             height: 35px;
             font-size: 16px;
@@ -35,8 +35,6 @@
         #scan-button:hover { background-color: #218838; }
         #cancel-button { background-color: #dc3545; }
         #cancel-button:hover { background-color: #c82333; }
-        #upload-button { background-color: #0078D4; }
-        #upload-button:hover { background-color: #005A9E; }
         #dwtcontrolContainer {
             width: 400px;
             height: 500px;
@@ -44,49 +42,27 @@
             border: 2px solid #ccc;
             margin-top: 60px;
         }
-        #dialog-box {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            z-index: 2000;
-        }
-        #dialog-box button {
-            margin: 10px;
-            padding: 10px;
-            font-size: 16px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
     <div id="input-container">
         <input type="button" id="scan-button" value="Scan" onclick="AcquireImage();" />
         <input type="button" id="cancel-button" value="Clear" onclick="ResetContainer();" />
-        <input type="button" id="upload-button" value="Upload to OneDrive" onclick="UploadToOneDrive();" />
     </div>
 
     <div id="dwtcontrolContainer"></div>
 
-    <div id="dialog-box">
-        <p>Do you want to scan another page?</p>
-        <button onclick="AcquireImage(); closeDialog();">Yes</button>
-        <button onclick="closeDialog();">No</button>
-    </div>
-
     <script type="text/javascript">
         let DWTObject = null;
-        let scannedBlob = null;
 
         Dynamsoft.DWT.RegisterEvent("OnWebTwainReady", function () {
             DWTObject = Dynamsoft.DWT.GetWebTwain('dwtcontrolContainer');
         });
+
+        function getQueryParameter(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name) || "";
+        }
 
         function AcquireImage() {
             if (DWTObject) {
@@ -99,48 +75,24 @@
                         return DWTObject.OpenSourceAsync();
                     })
                     .then(() => DWTObject.AcquireImageAsync({ IfCloseSourceAfterAcquire: true }))
-                    .then(() => DWTObject.ConvertToBlob([DWTObject.HowManyImagesInBuffer - 1], Dynamsoft.DWT.EnumDWT_ImageType.IT_PDF))
-                    .then((result) => {
-                        scannedBlob = result;
-                        showDialog(); // removed alert here
-                    })
+                    .then(() => DWTObject.ConvertToBlob(
+                        [DWTObject.HowManyImagesInBuffer - 1],
+                        Dynamsoft.DWT.EnumDWT_ImageType.IT_PDF
+                    ))
+                    .then(blob => UploadToOneDrive(blob))
                     .catch(exp => console.error(exp.message));
             }
         }
 
-        function showDialog() {
-            document.getElementById("dialog-box").style.display = "block";
-        }
-
-        function closeDialog() {
-            document.getElementById("dialog-box").style.display = "none";
-        }
-
-        function ResetContainer() {
-            location.reload();
-        }
-
-        function getQueryParameter(name) {
-            const params = new URLSearchParams(window.location.search);
-            return params.get(name) || "";
-        }
-
-        async function UploadToOneDrive() {
-            if (!scannedBlob) {
-                alert("Please scan a document first.");
-                return;
-            }
-
+        async function UploadToOneDrive(scannedBlob) {
             const accessToken = getQueryParameter("access_token");
-            const fileName = getQueryParameter("file_name");
+            const uploadUrl = getQueryParameter("file_name"); // Full Graph URL
             const applicationType = getQueryParameter("application_type") || "application/pdf";
 
-            if (!accessToken || !fileName) {
-                alert("Missing access_token or file_name in URL.");
+            if (!accessToken || !uploadUrl) {
+                alert("Missing access_token or file_name (uploadUrl) in URL.");
                 return;
             }
-
-            const uploadUrl = fileName; // full URL passed as file_name
 
             try {
                 const response = await fetch(uploadUrl, {
@@ -154,17 +106,18 @@
 
                 if (response.ok) {
                     const json = await response.json();
-                    alert("Upload successful!\nFile URL: " + json.webUrl);
-                    console.log("Upload success:", json);
+                    alert("✅ Upload successful!\nFile URL: " + json.webUrl);
                 } else {
                     const errorText = await response.text();
-                    alert("Upload failed:\n" + errorText);
                     console.error("Upload failed:", errorText);
                 }
             } catch (err) {
-                alert("An unexpected error occurred.");
                 console.error("Upload error:", err);
             }
+        }
+
+        function ResetContainer() {
+            location.reload();
         }
     </script>
 </body>
