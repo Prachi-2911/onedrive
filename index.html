@@ -27,25 +27,25 @@
     </style>
 </head>
 <body>
- 
+
     <h2>KP Scan and Upload Document</h2>
     <button onclick="acquireImage()">Scan Document</button>
     <button onclick="uploadToOneDrive()">Upload to OneDrive</button>
- 
+
     <script>
         let DWObject = null;
         let scannedBlob = null;
- 
+
         Dynamsoft.DWT.RegisterEvent('OnWebTwainReady', function () {
             DWObject = Dynamsoft.DWT.GetWebTwain('dwtcontrolContainer');
         });
- 
+
         function acquireImage() {
             if (!DWObject) {
                 alert("Scanner not ready yet.");
                 return;
             }
- 
+
             DWObject.SelectSourceAsync().then(() => {
                 return DWObject.AcquireImageAsync({});
             }).then(() => {
@@ -59,27 +59,25 @@
                 console.error(err);
             });
         }
- 
+
         async function uploadToOneDrive() {
             if (!scannedBlob) {
                 alert("Please scan a document first.");
                 return;
             }
- 
-            // Read URL parameters
+
             const params = new URLSearchParams(window.location.search);
             const accessToken = params.get("access_token");
-            const orderNo = params.get("order_no");
+            const fileName = params.get("file_name");
             const applicationType = params.get("application_type") || "application/pdf";
- 
-            if (!accessToken || !orderNo) {
-                alert("Missing access_token or order_no in URL.");
+
+            if (!accessToken || !fileName) {
+                alert("Missing access_token or file_name in URL.");
                 return;
             }
- 
-            const fileName = `${orderNo}_Scanned.pdf`;
+
             const uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/KP Docs/${fileName}:/content`;
- 
+
             try {
                 const response = await fetch(uploadUrl, {
                     method: "PUT",
@@ -87,27 +85,3 @@
                         "Authorization": `Bearer ${accessToken}`,
                         "Content-Type": applicationType
                     },
-                    body: scannedBlob
-                });
- 
-                if (response.ok) {
-                    const json = await response.json();
-                    alert("Upload successful!\nFile URL: " + json.webUrl);
-                    console.log("Upload success:", json);
-                } else {
-                    const errorText = await response.text();
-                    alert("Upload failed:\n" + errorText);
-                    console.error("Upload failed:", errorText);
-                }
-            } catch (err) {
-                alert("An unexpected error occurred.");
-                console.error("Upload error:", err);
-            }
-        }
-    </script>
- 
-    <!-- Dynamsoft container (required) -->
-    <div id="dwtcontrolContainer" style="width:0;height:0;"></div>
- 
-</body>
-</html>
