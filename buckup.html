@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello World</title>
+    <script type="text/javascript" src="Resources/dynamsoft.webtwain.initiate.js"></script>
+    <script type="text/javascript" src="Resources/dynamsoft.webtwain.config.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f4f4f4;
+        }
+        #input-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        #scan-button, #cancel-button {
+            width: 200px;
+            height: 35px;
+            font-size: 18px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #scan-button {
+            background-color: #28a745;
+        }
+        #scan-button:hover {
+            background-color: #218838;
+        }
+        #cancel-button {
+            background-color: #dc3545;
+        }
+        #cancel-button:hover {
+            background-color: #c82333;
+        }
+        #dwtcontrolContainer {
+            width: 400px;
+            height: 500px;
+            background-color: white;
+            border: 2px solid #ccc;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="dwtcontrolContainer"></div>
+    <div id="input-container">
+        <input type="button" id="scan-button" value="Scan" onclick="AcquireImage();" />
+        <input type="button" id="cancel-button" value="Cancel" onclick="ResetContainer();" />
+    </div>
+    
+    <script type="text/javascript">
+        var DWTObject;
+        function InitializeDWT() {
+            Dynamsoft.DWT.RegisterEvent("OnWebTwainReady", function () {
+                DWTObject = Dynamsoft.DWT.GetWebTwain('dwtcontrolContainer');
+            });
+        }
+        
+        InitializeDWT();
+
+        function AcquireImage() {
+            if (DWTObject) {
+                DWTObject.SelectSourceAsync()
+                    .then(function(){
+                        return DWTObject.AcquireImageAsync({
+                            IfCloseSourceAfterAcquire: true 
+                        });
+                    })
+                    .then(function() {
+                        DownloadPDF();
+                    })
+                    .catch(function (exp) {
+                        alert(exp.message);
+                    });
+            }
+        }
+
+        function DownloadPDF() {
+            if (DWTObject) {
+                if (DWTObject.HowManyImagesInBuffer > 0) {
+                    DWTObject.SaveAllAsPDF("D:/BLOG/ScannedDocument.pdf", 
+                        function(){
+                            alert("PDF downloaded successfully.");
+                        }, 
+                        function(errorCode, errorString){
+                            alert("Error: " + errorString);
+                        }
+                    );
+                } else {
+                    alert("No scanned image to download.");
+                }
+            }
+        }
+
+        function ResetContainer() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KP Scan Document</title>
+    <script type="text/javascript" src="Resources/dynamsoft.webtwain.initiate.js"></script>
+    <script type="text/javascript" src="Resources/dynamsoft.webtwain.config.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+            height: 100vh;
+        }
+
+        #dwtcontrolContainer {
+            width: 400px;
+            height: 500px;
+            background-color: white;
+            border: 2px solid #ccc;
+            margin-top: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div id="dwtcontrolContainer"></div>
+
+    <script type="text/javascript">
+        var DWTObject;
+
+        Dynamsoft.DWT.RegisterEvent("OnWebTwainReady", function () {
+            DWTObject = Dynamsoft.DWT.GetWebTwain('dwtcontrolContainer');
+            if (DWTObject) {
+                startScanAutomatically();
+            }
+        });
+
+        function startScanAutomatically() {
+            DWTObject.GetSourceNamesAsync()
+                .then(sources => {
+                    if (sources.length === 0) {
+                        Microsoft.Dynamics.NAV.InvokeExtensibilityMethod("OnScanError", ["No scanner detected."]);
+                        throw new Error("No scanner detected.");
+                    }
+                    return DWTObject.OpenSourceAsync();
+                })
+                .then(() => DWTObject.AcquireImageAsync({ IfCloseSourceAfterAcquire: true }))
+                .then(() => convertPDFToBase64())
+                .catch(exp => {
+                    console.error("Scan error:", exp.message);
+                    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod("OnScanError", [exp.message]);
+                });
+        }
+
+        function convertPDFToBase64() {
+            if (DWTObject.HowManyImagesInBuffer > 0) {
+                DWTObject.ConvertToBlob(
+                    [0], // Convert first image, or use [0,1,2,...] for all
+                    Dynamsoft.DWT.EnumDWT_ImageType.IT_PDF,
+                    function (result, indices, blob) {
+                        const reader = new FileReader();
+                        reader.onloadend = function () {
+                            const base64String = reader.result.split(',')[1]; // Remove prefix
+                            Microsoft.Dynamics.NAV.InvokeExtensibilityMethod("OnPDFBase64Ready", [base64String]);
+                            console.log(base64String);
+                        };
+                        reader.readAsDataURL(blob);
+                    },
+                    function (errCode, errString) {
+                        Microsoft.Dynamics.NAV.InvokeExtensibilityMethod("OnScanError", ["PDF conversion failed: " + errString]);
+                    }
+                );
+            } else {
+                Microsoft.Dynamics.NAV.InvokeExtensibilityMethod("OnScanError", ["No scanned image in buffer."]);
+            }
+        }
+    </script>
+</body>
+</html>

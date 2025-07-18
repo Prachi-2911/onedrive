@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KP Scan Document</title>
+    <script type="text/javascript" src="Resources/dynamsoft.webtwain.initiate.js"></script>
+    <script type="text/javascript" src="Resources/dynamsoft.webtwain.config.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+            height: 100vh;
+        }
+        #input-container {
+            display: flex;
+            gap: 10px;
+            position: fixed;
+            top: 10px;
+            background-color: #f4f4f4;
+            padding: 10px;
+            z-index: 1000;
+        }
+        #scan-button, #cancel-button {
+            width: 200px;
+            height: 35px;
+            font-size: 18px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #scan-button { background-color: #28a745; }
+        #scan-button:hover { background-color: #218838; }
+        #cancel-button { background-color: #dc3545; }
+        #cancel-button:hover { background-color: #c82333; }
+        #dwtcontrolContainer {
+            width: 400px;
+            height: 500px;
+            background-color: white;
+            border: 2px solid #ccc;
+            margin-top: 60px;
+        }
+        #dialog-box {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            z-index: 2000;
+        }
+        #dialog-box button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="input-container">
+        <input type="button" id="scan-button" value="Scan" onclick="AcquireImage();" />
+        <input type="button" id="cancel-button" value="Clear" onclick="ResetContainer();" />
+    </div>
+    <div id="dwtcontrolContainer"></div>
+    
+    <div id="dialog-box">
+        <p>Do you want to scan another page?</p>
+        <button onclick="AcquireImage(); closeDialog();">Yes</button>
+        <button onclick="DownloadPDF(); closeDialog();">No</button>
+    </div>
+    
+    <script type="text/javascript">
+        var DWTObject;
+        Dynamsoft.DWT.RegisterEvent("OnWebTwainReady", function () {
+            DWTObject = Dynamsoft.DWT.GetWebTwain('dwtcontrolContainer');
+        });
+
+        function AcquireImage() {
+            if (DWTObject) {
+                DWTObject.GetSourceNamesAsync()
+                    .then(sources => {
+                        if (sources.length === 0) {
+                            alert("No scanner detected. Please connect a scanner and try again.");
+                            return Promise.reject("No scanner available.");
+                        }
+                        return DWTObject.OpenSourceAsync();
+                    })
+                    .then(() => DWTObject.AcquireImageAsync({ IfCloseSourceAfterAcquire: true }))
+                    .then(() => showDialog())
+                    .catch(exp => console.error(exp.message));
+            }
+        }
+
+        function showDialog() {
+            document.getElementById("dialog-box").style.display = "block";
+        }
+
+        function closeDialog() {
+            document.getElementById("dialog-box").style.display = "none";
+        }
+
+        function getQueryParameter(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name) || "";
+        }
+
+        function DownloadPDF() {
+            if (DWTObject) {
+                if (DWTObject.HowManyImagesInBuffer > 0) {
+                    let orderNumber = getQueryParameter("orderNo");
+                    let filePath = getQueryParameter("filePath");
+                    let fileName = orderNumber;
+                    let fullPath = filePath + fileName;
+                    DWTObject.IfShowFileDialog = false;
+                    DWTObject.SaveAllAsPDF(fullPath,
+                        function () {
+                            alert("PDF saved successfully at: " + fullPath);
+                        },
+                        function (errorCode, errorString) {
+                            alert("Error: " + errorString);
+                        }
+                    );
+                } else {
+                    alert("No scanned image to download.");
+                }
+            }
+        }
+
+        function ResetContainer() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
