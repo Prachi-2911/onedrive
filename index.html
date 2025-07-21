@@ -94,50 +94,48 @@
         }
 
         async function uploadToOneDrive() {
-    const accessToken = getQueryParameter("access_token");
-    const fileName = getQueryParameter("file_name");
-    const applicationType = getQueryParameter("application_type") || "application/pdf";
+            const accessToken = getQueryParameter("access_token");
+            const fileName = getQueryParameter("file_name");
+            const applicationType = getQueryParameter("application_type") || "application/pdf";
 
-    if (!accessToken || !fileName) {
-        alert("Missing access_token or file_name in URL.");
-        return;
-    }
+            if (!accessToken || !fileName) {
+                alert("Missing access_token or file_name in URL.");
+                return;
+            }
 
-    const uploadUrl = `https://graph.microsoft.com/${fileName}`;
+            const uploadUrl = `https://graph.microsoft.com/${fileName}`;
 
-    try {
-        const response = await fetch(uploadUrl, {
-            method: "PUT",
-            headers: {
-                "Authorization": `Bearer ${accessToken}`,
-                "Content-Type": applicationType
-            },
-            body: scannedBlob
-        });
+            try {
+                const response = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "Content-Type": applicationType
+                    },
+                    body: scannedBlob
+                });
 
-        if (response.ok) {
-            alert("✅ File uploaded successfully to OneDrive!");
+                if (response.ok) {
+                    alert("✅ File uploaded successfully to OneDrive!");
+                    // Try to close the window
+                    window.close();
 
-            // Try closing the window (works only if opened via script)
-            window.close();
-
-            // Fallback in case browser blocks window.close()
-            setTimeout(() => {
-                if (!window.closed) {
-                    document.body.innerHTML = "<h2 style='text-align:center;'>✅ File uploaded.<br>🔒 Please close this tab manually.</h2>";
+                    // Fallback if window doesn't close (browser security)
+                    setTimeout(() => {
+                        if (!window.closed) {
+                            document.body.innerHTML = "<h2 style='text-align:center;'>✅ File uploaded.<br>🔒 Please close this tab manually.</h2>";
+                        }
+                    }, 500);
+                } else {
+                    const errorText = await response.text();
+                    alert("Upload failed:\n" + errorText);
+                    console.error("Upload failed:", errorText);
                 }
-            }, 500);
-        } else {
-            const errorText = await response.text();
-            alert("Upload failed:\n" + errorText);
-            console.error("Upload failed:", errorText);
+            } catch (err) {
+                alert("An unexpected error occurred.");
+                console.error("Upload error:", err);
+            }
         }
-    } catch (err) {
-        alert("An unexpected error occurred.");
-        console.error("Upload error:", err);
-    }
-}
-
 
         function ResetContainer() {
             location.reload();
