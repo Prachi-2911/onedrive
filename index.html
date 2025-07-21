@@ -94,43 +94,41 @@
         }
 
         async function uploadToOneDrive() {
-    const accessToken = getQueryParameter("access_token");
-    const fileName = getQueryParameter("file_name"); // This includes full Graph path after domain
-    const applicationType = getQueryParameter("application_type") || "application/pdf";
+            const accessToken = getQueryParameter("access_token");
+            const fileName = getQueryParameter("file_name"); // This includes full Graph path after domain
+            const applicationType = getQueryParameter("application_type") || "application/pdf";
 
-    if (!accessToken || !fileName) {
-        alert("Missing access_token or file_name in URL.");
-        return;
-    }
+            if (!accessToken || !fileName) {
+                alert("Missing access_token or file_name in URL.");
+                return;
+            }
 
-    const uploadUrl = `https://graph.microsoft.com/${fileName}`;
+            const uploadUrl = `https://graph.microsoft.com/${fileName}`;
 
-    try {
-        const response = await fetch(uploadUrl, {
-            method: "PUT",
-            headers: {
-                "Authorization": `Bearer ${accessToken}`,
-                "Content-Type": applicationType
-            },
-            body: scannedBlob
-        });
+            try {
+                const response = await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "Content-Type": applicationType
+                    },
+                    body: scannedBlob
+                });
 
-        if (response.ok) {
-            const json = await response.json();
-            // alert("Upload successful!\nFile URL: " + json.webUrl); // ✅ Commented as requested
-            console.log("Upload successful. File URL:", json.webUrl);
-        } else {
-            const errorText = await response.text();
-            alert("Upload failed:\n" + errorText);
-            console.error("Upload failed:", errorText);
+                if (response.ok) {
+                    const json = await response.json();
+                    alert("File uploaded successfully to OneDrive!");
+                    window.close();
+                } else {
+                    const errorText = await response.text();
+                    alert("Upload failed:\n" + errorText);
+                    console.error("Upload failed:", errorText);
+                }
+            } catch (err) {
+                alert("An unexpected error occurred.");
+                console.error("Upload error:", err);
+            }
         }
-    } catch (err) {
-        alert("An unexpected error occurred.");
-        console.error("Upload error:", err);
-    }
-}
-
-
 
         function ResetContainer() {
             location.reload();
